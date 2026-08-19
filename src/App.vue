@@ -47,6 +47,7 @@ const handleLoginAttempt = ({ email, password, type }) => {
     v-else
     :user-name="currentUser?.name || 'Usuário'"
     :user-type="currentUser?.type || 'admin'"
+    :producer-id="currentUser?.id ?? null"
     @logout="handleLogout"
   />
 </template>

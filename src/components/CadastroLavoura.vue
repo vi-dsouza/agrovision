@@ -1,5 +1,16 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
+
+const LAVOURAS_STORAGE_KEY = 'agrovision:lavouras'
+
+const readStoredLavouras = () => {
+  try {
+    const saved = localStorage.getItem(LAVOURAS_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
 
 const props = defineProps({
   producers: { type: Array, default: () => [] }
@@ -18,7 +29,18 @@ const form = reactive({
   produtorId: null
 })
 
-const lavouras = ref([])
+const lavouras = ref(readStoredLavouras())
+
+watch(
+  lavouras,
+  (value) => {
+    try {
+      localStorage.setItem(LAVOURAS_STORAGE_KEY, JSON.stringify(value))
+    } catch {
+    }
+  },
+  { deep: true }
+)
 
 const selectedLavoura = ref(null)
 const modalVisible = ref(false)
@@ -177,11 +199,11 @@ const simulationSize = computed(() => {
         </thead>
         <tbody>
           <tr v-for="l in lavouras" :key="l.id" @click="viewDetails(l)" style="cursor:pointer">
-            <td>{{ (props.producers.find(p => p.id === l.produtorId) || {}).name || '—' }}</td>
-            <td>{{ l.cultura }}</td>
-            <td>{{ l.area }}</td>
-            <td>{{ l.identificacao }}</td>
-            <td>
+            <td data-label="Produtor">{{ (props.producers.find(p => p.id === l.produtorId) || {}).name || '—' }}</td>
+            <td data-label="Cultura">{{ l.cultura }}</td>
+            <td data-label="Área">{{ l.area }}</td>
+            <td data-label="Talhão">{{ l.identificacao }}</td>
+            <td data-label="Ações">
               <button @click.stop="viewDetails(l)" class="icon-btn view">Visualizar</button>
               <button @click.stop="startEdit(l)" class="icon-btn">Editar</button>
               <button @click.stop="deleteLavoura(l.id)" class="icon-btn danger">Excluir</button>
@@ -316,16 +338,84 @@ const simulationSize = computed(() => {
 .modal-content { padding:20px }
 
 @media (max-width: 900px) {
-  .modal-body { flex-direction:column }
-  .modal-info { width:100% }
-}
-
-@media (max-width: 900px) {
   .farm-shell { flex-direction:column }
   .farm-form { width:100%; max-width:100% }
+  .farm-simulation { width:100% }
   .sim-wrap { flex-direction:column }
   .sim-canvas { min-width:100%; flex:1 }
   .sim-empty, .sim-svg { width:100%; height:200px }
   .sim-info { width:100%; }
+  .modal-body { flex-direction:column }
+  .modal-info { width:100% }
+}
+
+@media (max-width: 700px) {
+  .farm-shell {
+    gap: 14px;
+  }
+
+  .grid-row {
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+
+  .lavouras-table,
+  .lavouras-table thead,
+  .lavouras-table tbody,
+  .lavouras-table tr,
+  .lavouras-table th,
+  .lavouras-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .lavouras-table thead {
+    display: none;
+  }
+
+  .lavouras-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lavouras-table tbody tr {
+    background: #fafcfb;
+    border: 1px solid #ebf0eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .lavouras-table td {
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .lavouras-table td:before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #334136;
+    min-width: 90px;
+  }
+
+  .lavouras-table td:last-child {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .icon-btn {
+    margin: 4px 4px 0 0;
+  }
 }
 </style>

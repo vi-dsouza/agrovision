@@ -1,7 +1,39 @@
 <script setup>
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
+import {
+  mdiAccount,
+  mdiBookOpenVariant,
+  mdiLeaf,
+  mdiLogout,
+  mdiMenu,
+  mdiShield,
+  mdiSprout
+} from '@mdi/js'
 import { authMock } from '../mocks/auth'
 import CadastroLavoura from './CadastroLavoura.vue'
+import CadastroDefensivos from './CadastroDefensivos.vue'
+import CadastroOrientacao from './CadastroOrientacao.vue'
+
+const USERS_STORAGE_KEY = 'agrovision:users'
+const LAVOURAS_STORAGE_KEY = 'agrovision:lavouras'
+
+const readStoredUsers = () => {
+  try {
+    const saved = localStorage.getItem(USERS_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : authMock.map((u) => ({ ...u }))
+  } catch {
+    return authMock.map((u) => ({ ...u }))
+  }
+}
+
+const readStoredLavouras = () => {
+  try {
+    const saved = localStorage.getItem(LAVOURAS_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
 
 const props = defineProps({
   userName: {
@@ -11,6 +43,10 @@ const props = defineProps({
   userType: {
     type: String,
     default: 'admin'
+  },
+  producerId: {
+    type: [Number, String, null],
+    default: null
   }
 })
 
@@ -21,15 +57,15 @@ const isSidebarOpen = ref(false)
 const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value }
 
 const adminMenuItems = [
-  { label: 'Cadastrar Usuários', active: true, icon: '👤' },
-  { label: 'Defensivos', active: false, icon: '🛡️' },
-  { label: 'Cadastrar Lavouras', active: false, icon: '🌾' },
-  { label: 'Cadastrar Orientação', active: false, icon: '📘' }
+  { label: 'Cadastrar Usuários', active: true, icon: mdiAccount },
+  { label: 'Defensivos', active: false, icon: mdiShield },
+  { label: 'Cadastrar Lavouras', active: false, icon: mdiSprout },
+  { label: 'Cadastrar Orientação', active: false, icon: mdiBookOpenVariant }
 ]
 
 const producerMenuItems = [
-  { label: 'Minhas Lavouras', active: true, icon: '🌿' },
-  { label: 'Orientação', active: false, icon: '📘' }
+  { label: 'Minhas Lavouras', active: true, icon: mdiLeaf },
+  { label: 'Orientação', active: false, icon: mdiBookOpenVariant }
 ]
 
 const menuItems = computed(() => (props.userType === 'produtor' ? producerMenuItems : adminMenuItems))
@@ -39,10 +75,37 @@ const setActive = (label) => { activeView.value = label }
 
 const producers = computed(() => users.value.filter(u => u.type === 'produtor'))
 
-// Users management (local state initialized from mock)
-const users = ref([])
-// initialize a shallow copy so we don't mutate the mock directly
-users.value = authMock.map((u) => ({ ...u }))
+// Users management (persisted in localStorage so the list survives page changes)
+const users = ref(readStoredUsers())
+const lavouras = ref(readStoredLavouras())
+
+watch(
+  users,
+  (value) => {
+    try {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(value))
+    } catch {
+      // ignore storage errors in restricted environments
+    }
+  },
+  { deep: true }
+)
+
+watch(
+  lavouras,
+  (value) => {
+    try {
+      localStorage.setItem(LAVOURAS_STORAGE_KEY, JSON.stringify(value))
+    } catch {
+      // ignore storage errors in restricted environments
+    }
+  },
+  { deep: true }
+)
+
+const producerLavouras = computed(() =>
+  lavouras.value.filter((lavoura) => Number(lavoura.produtorId) === Number(props.producerId))
+)
 
 // (show all users in the list; profile is chosen per-user in the form)
 
@@ -125,14 +188,22 @@ const deleteUser = (id) => {
           :class="{ active: activeView === item.label }"
           @click="setActive(item.label)"
         >
-          <span class="item-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="item-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="item-icon-svg" aria-hidden="true">
+              <path :d="item.icon" fill="currentColor" />
+            </svg>
+          </span>
           <span>{{ item.label }}</span>
         </button>
       </nav>
 
       <div class="menu-section-divider"></div>
       <button type="button" class="menu-item secondary" @click="emit('logout')">
-        <span class="item-icon" aria-hidden="true">🚪</span>
+        <span class="item-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" class="item-icon-svg" aria-hidden="true">
+            <path :d="mdiLogout" fill="currentColor" />
+          </svg>
+        </span>
         <span>Sair</span>
       </button>
     </aside>
@@ -143,15 +214,37 @@ const deleteUser = (id) => {
     <main class="content-area">
       <!-- hamburger toggle placed inside content so title appears below it -->
       <button class="hamburger" :class="{ hidden: isSidebarOpen }" @click="toggleSidebar" aria-label="Abrir menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M3 6h18M3 12h18M3 18h18" stroke="#000" stroke-width="1.6" stroke-linecap="round"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+          <path :d="mdiMenu" fill="currentColor" />
         </svg>
       </button>
 
-      <h1 class="page-title">{{ activeView === 'Cadastrar Lavouras' ? 'Lavouras' : (props.userType === 'produtor' ? 'Minhas Lavouras' : 'Usuários') }}</h1>
+      <h1 class="page-title">
+        {{
+          activeView === 'Cadastrar Lavouras'
+            ? 'Lavouras'
+            : activeView === 'Defensivos'
+              ? 'Defensivos'
+              : activeView === 'Cadastrar Orientação' || activeView === 'Orientação'
+                ? 'Orientações'
+                : (props.userType === 'produtor' ? 'Minhas Lavouras' : 'Usuários')
+        }}
+      </h1>
 
       <div v-if="activeView === 'Cadastrar Lavouras'">
         <CadastroLavoura :producers="producers" />
+      </div>
+
+      <div v-else-if="activeView === 'Defensivos'">
+        <CadastroDefensivos />
+      </div>
+
+      <div v-else-if="activeView === 'Cadastrar Orientação'">
+        <CadastroOrientacao />
+      </div>
+
+      <div v-else-if="props.userType === 'produtor' && activeView === 'Orientação'">
+        <CadastroOrientacao :producer-id="props.producerId ?? null" :is-producer-view="true" />
       </div>
 
       <div v-else-if="props.userType === 'admin'" class="admin-users">
@@ -219,10 +312,10 @@ const deleteUser = (id) => {
 
             <tbody>
               <tr v-for="u in users" :key="u.id">
-                <td>{{ u.name }}</td>
-                <td>{{ u.email }}</td>
-                <td>{{ u.type }}</td>
-                <td style="white-space:nowrap">
+                <td data-label="Nome">{{ u.name }}</td>
+                <td data-label="Email">{{ u.email }}</td>
+                <td data-label="Perfil">{{ u.type }}</td>
+                <td data-label="Ações" style="white-space:nowrap">
                   <button class="icon-btn" title="Editar" aria-label="Editar" @click="startEdit(u)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M3 21l3-1 11-11 1-3-3 1L4 20z" stroke="#000" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -243,8 +336,45 @@ const deleteUser = (id) => {
         </section>
       </div>
 
-      <div v-else>
-        <p>Área do produtor: aqui aparecem suas lavouras.</p>
+      <div v-else class="producer-lavouras-panel">
+        <section class="producer-farms-view">
+          <div class="producer-farms-header">
+            <div>
+              <h2>Minhas lavouras</h2>
+              <p>Resumo das lavouras vinculadas ao seu cadastro.</p>
+            </div>
+            <span class="producer-farm-total">{{ producerLavouras.length }} lavoura(s)</span>
+          </div>
+
+          <div v-if="producerLavouras.length === 0" class="empty-box">
+            Nenhuma lavoura cadastrada para você ainda.
+          </div>
+
+          <div v-else class="producer-farms-grid">
+            <article v-for="lavoura in producerLavouras" :key="lavoura.id" class="producer-farm-card">
+              <div class="producer-farm-plot" aria-label="Representação gráfica da lavoura">
+                <svg width="220" height="140" viewBox="0 0 220 140" preserveAspectRatio="xMidYMid meet">
+                  <rect x="20" y="18" width="180" height="104" rx="10" fill="#eaf7eb" stroke="#2b8a3e" stroke-width="2" />
+                  <rect x="30" y="28" width="160" height="84" rx="8" fill="#d7f0d6" stroke="#2b8a3e" stroke-width="1.5" />
+                </svg>
+              </div>
+
+              <div class="producer-farm-details">
+                <div class="producer-farm-topline">
+                  <h3>{{ lavoura.cultura || 'Cultura' }}</h3>
+                  <span class="badge">{{ lavoura.area || '—' }} ha</span>
+                </div>
+
+                <ul>
+                  <li><strong>Talhão:</strong> {{ lavoura.identificacao || '—' }}</li>
+                  <li><strong>Largura:</strong> {{ lavoura.largura || '—' }} m</li>
+                  <li><strong>Comprimento:</strong> {{ lavoura.comprimento || '—' }} m</li>
+                  <li><strong>Plantio:</strong> {{ lavoura.dataPlantio || '—' }}</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -329,6 +459,12 @@ const deleteUser = (id) => {
 .menu-item { display:flex; align-items:center; gap:12px; width:100%; border:none; background:transparent; color:#111; text-align:left; padding:15px 18px 15px 22px; font-size:17px; font-weight:500; cursor:pointer }
 .menu-item:hover { background: rgba(255,255,255,0.08) }
 .item-icon { width:18px; display:inline-flex; justify-content:center; align-items:center; font-size:18px; color:#000; }
+.item-icon-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  color: #000;
+}
 
 .menu-section-divider { height:1px; background: rgba(17,17,17,0.22); margin:12px 18px 8px }
 
@@ -342,13 +478,67 @@ const deleteUser = (id) => {
   .sidebar:not(.mobile-closed) { transform: translateX(0); box-shadow: 6px 0 18px rgba(0,0,0,0.18) }
   .backdrop { display:block }
   .hamburger { display:inline-flex; top: 18px }
-  .content-area { padding: 72px 18px 28px 76px }
-  .admin-users { grid-template-columns: 1fr }
-  .admin-users .user-form, .admin-users .user-list { width:100% }
+  .content-area { padding: 72px 18px 28px 18px }
+  .admin-users {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .admin-users .user-form, .admin-users .user-list { width:100%; display:block }
 }
 
 @media (max-width: 700px) {
   .admin-users { gap:14px }
+  .content-area { padding: 72px 12px 18px 12px }
+  .user-form, .user-list { padding: 14px }
+
+  .users-table,
+  .users-table thead,
+  .users-table tbody,
+  .users-table tr,
+  .users-table th,
+  .users-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .users-table thead {
+    display: none;
+  }
+
+  .users-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .users-table tbody tr {
+    background: #fafcfb;
+    border: 1px solid #ebf0eb;
+    border-radius: 10px;
+    padding: 12px 10px;
+  }
+
+  .users-table td {
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+
+  .users-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #334136;
+    min-width: 80px;
+  }
+
+  .users-table td:last-child {
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 1000px) {
@@ -357,7 +547,7 @@ const deleteUser = (id) => {
   .admin-users .user-list { order: 2; margin-top: 12px }
   .admin-users .user-form, .admin-users .user-list { width:100%; display:block }
   /* ensure hamburger does not overlap title on intermediate sizes */
-  .content-area { padding-left: 76px }
+  .content-area { padding-left: 18px }
 }
 
 .content-area { flex:1; background:#f4f4f4; padding:28px 32px; overflow:auto; max-height:100vh }
@@ -371,9 +561,32 @@ const deleteUser = (id) => {
 .users-table thead th { font-weight:600; font-size:13px }
 .users-table tbody tr:last-child td { border-bottom:none }
 .users-table button { margin-left:6px; padding:6px 8px; background:transparent; border:1px solid #ddd; border-radius:6px; cursor:pointer }
-.input-with-icon { display:flex; align-items:center; gap:10px; background:#fff; padding:12px 14px; border-radius:10px; border:1px solid #e9e9e9; box-shadow:0 10px 24px rgba(8,12,8,0.04) }
-.input-with-icon .input-icon { width:18px; height:18px; flex:0 0 18px; opacity:0.9 }
-.input-with-icon input { border:none; outline:none; font-size:15px; background:transparent; width:100% }
+.input-with-icon {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e9e9e9;
+  box-shadow: 0 10px 24px rgba(8, 12, 8, 0.04);
+}
+.input-with-icon .input-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  opacity: 0.9;
+  justify-self: start;
+}
+.input-with-icon input {
+  border: none;
+  outline: none;
+  font-size: 15px;
+  background: transparent;
+  width: 100%;
+  padding: 0;
+}
 .input-with-icon input::placeholder { color:#cfcfcf }
 .form-title { margin:0 0 12px 0; font-size:18px; color:#333 }
 .form-actions { display:flex; gap:10px; align-items:center; margin-top:12px }
@@ -386,6 +599,147 @@ const deleteUser = (id) => {
 /* form container styling for nicer look */
 .nice-form { display:flex; flex-direction:column; gap:12px }
 .nice-form .field { display:flex; flex-direction:column; gap:8px }
+.nice-form .field.input-with-icon {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  flex-direction: initial;
+}
 .nice-form select, .nice-form input { padding:10px 12px; border-radius:8px; border:1px solid #eaeaea; font-size:14px }
 .nice-form input:focus, .nice-form select:focus { outline:none; border-color:#2b8a3e; box-shadow:0 8px 20px rgba(43,138,62,0.06) }
+
+.producer-lavouras-panel {
+  margin-top: 20px;
+}
+
+.producer-farms-view {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(8, 12, 8, 0.04);
+  padding: 22px;
+}
+
+.producer-farms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.producer-farms-header h2 {
+  margin: 0;
+  font-size: 28px;
+  color: #1e2a1d;
+}
+
+.producer-farms-header p {
+  margin: 6px 0 0;
+  color: #5b655d;
+  font-size: 14px;
+}
+
+.producer-farm-total {
+  display: inline-flex;
+  align-items: center;
+  background: #e7f7ea;
+  color: #1f7a35;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty-box {
+  text-align: center;
+  color: #657168;
+  padding: 20px;
+  background: #fafcfa;
+  border-radius: 12px;
+  border: 1px dashed #dfe8df;
+}
+
+.producer-farms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.producer-farm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid #edf2ed;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f7faf7);
+  overflow: hidden;
+}
+
+.producer-farm-plot {
+  width: 100%;
+  background: #f5faf5;
+  border-bottom: 1px solid #edf2ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.producer-farm-plot svg {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.producer-farm-details {
+  padding: 0 16px 16px;
+}
+
+.producer-farm-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.producer-farm-topline h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #1e2a1d;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e7f7ea;
+  color: #1f7a35;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.producer-farm-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #48534a;
+  font-size: 14px;
+}
+
+@media (max-width: 700px) {
+  .producer-farms-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .producer-farms-header h2 {
+    font-size: 24px;
+  }
+}
 </style>
