@@ -1,42 +1,140 @@
-# agrovision
+# AgroVision
 
-This template should help get you started developing with Vue 3 in Vite.
+Sistema de gestão agrícola para produtores e administradores, desenvolvido com Vue 3 + Vite. A aplicação permite o cadastro e acompanhamento de usuários, lavouras, defensivos agrícolas e orientações técnicas.
 
-## Recommended IDE Setup
+## Visão geral
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+O projeto foi pensado para um ambiente de gestão rural, com fluxo de login por perfil e painel específico para:
 
-## Recommended Browser Setup
+- administradores
+- produtores
+- acompanhamento de lavouras e recomendações técnicas
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+A persistência dos dados é feita no `localStorage`, permitindo que as informações permaneçam disponíveis mesmo ao trocar de tela ou recarregar a página.
 
-## Type Support for `.vue` Imports in TS
+## Funcionalidades
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- Login com seleção de perfil (produtor ou administrador)
+- Cadastro de usuários
+- Cadastro de lavouras
+- Cadastro de defensivos agrícolas
+- Registro de orientações técnicas
+- Histórico de orientações
+- Dashboard com destaque para próxima visita
+- Visualização das lavouras por produtor
+- Layout responsivo para telas menores
 
-## Customize configuration
+## Stack utilizada
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+- Vue 3
+- Vite
+- TypeScript
+- HTML + CSS
+- localStorage para persistência local
+- MDI icons (`@mdi/js`)
 
-## Project Setup
+## Requisitos
 
-```sh
+- Node.js 22 ou superior
+- npm
+
+## Instalação
+
+1. Clone o projeto
+2. Acesse a pasta do projeto
+3. Instale as dependências:
+
+```bash
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+## Como rodar em desenvolvimento
 
-```sh
+```bash
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+A aplicação ficará disponível no navegador em modo de desenvolvimento, normalmente em:
 
-```sh
+```bash
+http://localhost:5173
+```
+
+## Build de produção
+
+```bash
 npm run build
 ```
+
+## Estrutura do projeto
+
+```text
+agrovision/
+├── public/
+│   └── agrovision-logo.png
+├── src/
+│   ├── assets/
+│   ├── components/
+│   │   ├── Login.vue
+│   │   ├── CadastroUsuarios.vue
+│   │   ├── CadastroLavoura.vue
+│   │   ├── CadastroDefensivos.vue
+│   │   └── CadastroOrientacao.vue
+│   ├── mocks/
+│   │   └── auth.ts
+│   ├── App.vue
+│   ├── main.ts
+│   └── style.css
+├── env.d.ts
+├── index.html
+├── package.json
+├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.node.json
+├── vite.config.ts
+├── README.md
+└── public/
+```
+
+## Persistência de dados
+
+A aplicação salva os dados principais em `localStorage`, com chaves como:
+
+- `agrovision:users`
+- `agrovision:lavouras`
+- `agrovision:defensivos`
+- `agrovision:orientacoes`
+
+Isso permite que as informações sejam mantidas mesmo quando o usuário navega entre telas.
+
+## Fluxo principal
+
+### Admin
+
+- Cadastra usuários
+- Cadastra defensivos
+- Cadastra lavouras
+- Cria orientações técnicas
+- Visualiza histórico e produtores vinculados
+
+### Produtor
+
+- Acessa sua área específica
+- Visualiza suas lavouras
+- Consulta orientações atribuídas
+- Acompanha próxima visita técnica
+
+## Observações
+
+- A aplicação utiliza dados mockados para login inicial e seed de usuários.
+- O projeto foi desenvolvido para demonstração e gestão local de informações agrícolas.
+- O objetivo principal é facilitar o acompanhamento operacional de produtores e administradores.
+
+## Licença
+
+Este projeto é de uso interno/demonstração e pode ser adaptado conforme necessidade do usuário ou equipe responsável.
+
+## Autor
+
+Projeto desenvolvido para gestão agrícola em ambiente Vue 3.
+
