@@ -553,6 +553,14 @@ const deleteUser = (id) => {
 .content-area { flex:1; background:#f4f4f4; padding:28px 32px; overflow:auto; max-height:100vh }
 .content-area h1 { margin:0; color:#2d2d2d; font-size:32px; font-weight:700; letter-spacing:-0.4px }
 
+@media (max-width: 900px) {
+  .content-area { padding:84px 18px 28px 18px }
+}
+
+@media (max-width: 700px) {
+  .content-area { padding:84px 12px 18px 12px }
+}
+
 .admin-users { display:grid; grid-template-columns:360px 1fr; gap:24px; margin-top:20px }
 .user-form { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.04) }
 .user-list { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.04) }
